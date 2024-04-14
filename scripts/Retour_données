@@ -1,0 +1,9 @@
+Retour documentation : 
+- manque "discipli" du fichier formations.csv : https://data.unif.app/data/avril2024/description_sortie_CASD_0640.pdf
+- intégrer dans la documentation data.unif les liens vers les référentiels (de la même manière que sur datagouv, pour les spécialités au bac)
+- moins codifier tout pour une meilleure prise en main des données et réutilisation : par exemple le sexe, mettre 'homme' / 'femme' et non '1' et '2'
+- entrée par personne possible ?
+
+##-- Questions
+
+- plusieurs graphs parlent de "réussite" : pas dans les données directement. Comment on mesure / quelle définition ? -> diplomés d'un bac +5 ?
