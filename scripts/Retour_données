@@ -3,7 +3,6 @@ Retour documentation :
 - intégrer dans la documentation data.unif les liens vers les référentiels (de la même manière que sur datagouv, pour les spécialités au bac)
 - moins codifier tout pour une meilleure prise en main des données et réutilisation : par exemple le sexe, mettre 'homme' / 'femme' et non '1' et '2'
 - entrée par personne possible ?
-
-##-- Questions
-
-- plusieurs graphs parlent de "réussite" : pas dans les données directement. Comment on mesure / quelle définition ? -> diplomés d'un bac +5 ?
+- clarifier dans la documentation spécialités au BAC à partir de 2021 (cohorte_spe.csv) et fillières avant 2021 (cohorte_bac.csv)
+- année du bac la plus ancienne est 1950
+- vérifier si ça vient de moi : tous les id ne sont pas au format chaîne de caractères (ex: cohorteid dans cohorte_sexe.csv)
