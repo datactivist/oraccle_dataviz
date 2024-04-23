@@ -88,7 +88,7 @@ rio::export(formations, "data/Export/formations_enrichies.csv")
 #     distinct(id_diplome, nom_diplome, id_secteur_discipline, SECTEUR_DISCIPLINAIRE_SISE) |> 
 #     rename(diplom = id_diplome,
 #            secteur_discipline_oraccle = id_secteur_discipline, 
-#            secteur_discipline_sise = SECTEUR_DISCIPLINAIRE_SISE) #252 types différents
+#            secteur_discipline_sise = SECTEUR_DISCIPLINAIRE_SISE) #252 secteurs différents
 #rio::export(diff_secteur_discipline, "./data/Export/diff_secteur_discipline.csv")
 
 
@@ -210,7 +210,9 @@ graph <- table |>
       scale_y_continuous(labels = scales::percent, limits = c(0,1)) +
       geom_hline(yintercept = .5, linetype = 2, col = "#666666", linewidth = .7) +
       coord_flip() +
-      custom_theme() #10 académies sur 34 en tout
+      custom_theme() +
+      theme(panel.grid.major.x = ggplot2::element_line(color = "#cbcbcb"),
+            panel.grid.major.y = ggplot2::element_blank()) #10 académies sur 34 en tout
 ggsave(file = "figures/academie_plus_femmes.png", plot = graph, width = 10, height = 5)
 graph <- table |> 
     filter(academie %in% c("Versailles", "Normandie", "Créteil", "Grenoble", "Rennes", "Limoges", "Poitiers", "Toulouse", "Lille", "Amiens")) |> 
@@ -223,7 +225,9 @@ graph <- table |>
       scale_y_continuous(labels = scales::percent, limits = c(0,1)) +
       geom_hline(yintercept = .5, linetype = 2, col = "#666666", linewidth = .7) +
       coord_flip() +
-      custom_theme()
+      custom_theme() +
+      theme(panel.grid.major.x = ggplot2::element_line(color = "#cbcbcb"),
+            panel.grid.major.y = ggplot2::element_blank())
 ggsave(file = "figures/academie_moins_femmes.png", plot = graph, width = 10, height = 5)
 
 
