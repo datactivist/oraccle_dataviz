@@ -73,6 +73,7 @@ formations <- formations |>
            nom_long_discipline, id_groupe_discipline, nom_groupe_discipline, id_secteur_discipline, nom_secteur_discipline, id_etablissement, 
            nom_etablissement, adresse_etablissement, academie) |> 
     distinct()
+rio::export(formations, "data/Export/formations_enrichies.csv")
 
 
 # Qualité données
