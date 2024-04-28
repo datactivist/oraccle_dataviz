@@ -9,6 +9,7 @@ library(gt)
 library(rvest)
 library(summarytools)
 library(htmlwidgets)
+library(ggiraph)
 
 # Import données Oraccle
 cohortes_age_premiereins <- read_delim("./data/Oraccle/cohorte_age_premiereins.csv", ",")
@@ -73,7 +74,7 @@ formations <- formations |>
            nom_long_discipline, id_groupe_discipline, nom_groupe_discipline, id_secteur_discipline, nom_secteur_discipline, id_etablissement, 
            nom_etablissement, adresse_etablissement, academie) |> 
     distinct()
-rio::export(formations, "data/Export/formations_enrichies.csv")
+#rio::export(formations, "data/Export/formations_enrichies.csv")
 
 
 # Qualité données
@@ -145,15 +146,18 @@ table <- cohorte_anbac |>
     # Dataviz
 graph <- ggplot(table) +
   aes(x = anbac, y = nb_etudiants, text = paste("Année du bac :", anbac,
-                                                "\nNombre d'étudiants :", nb_etudiants)) +
+                                                "\nNombre d'étudiants :", format(as.integer(nb_etudiants), nsmall = 1, big.mark = "."))) +
   geom_col(fill = "#fd710f", alpha = .7) +
   scale_y_continuous(labels = scales::comma) +
   scale_x_continuous(breaks = scales::pretty_breaks()) +
-  labs(x = "Année d'obtention", y = "Nombre d'étudiants",
-       title = "Année d'obtention du baccalauréat des étudiants") +
+  labs(x = "Année d'obtention", y = "Nombre d'étudiants", title = "Année d'obtention du baccalauréat des étudiants") +
   theme_minimal() +
-  custom_theme()
-ggraph <- ggplotly(graph, tooltip = c("text"))
+  custom_theme() +
+  theme(plot.margin = margin(0, 0, 5, 0))
+ggraph <- ggplotly(graph, tooltip = c("text")) |> 
+  layout(annotations = list(text ="En nombre d'étudiants - données cohorte_anbac.csv", 
+                      x = 0.1, y = 0.5, font=list(size = 25)))
+ggraph
 saveWidget(ggraph, file = "figures/distribution_annee_bac.html")
 
 
@@ -167,25 +171,26 @@ cohorte_sexe <- cohorte_sexe |>
            .by = cohorteid)
 table_femmes <- cohorte_sexe |> 
     filter(sexe == "femme")
+moy <- mean(table_femmes$percent)
     # Dataviz
 graph <- ggplot(data = table_femmes) + 
-  geom_histogram(mapping = aes(x = percent, y=..density..), fill = "#fd710f", color = "white", alpha = .7) +
-  stat_function(fun = dnorm, args = list(mean = mean(table_femmes$percent), sd = sd(table_femmes$percent)), 
-                size = 1, alpha = .8, aes(col = "Distribution normale")) +
+  geom_histogram(aes(x = percent), 
+                             fill = "#fd710f", col = "white", alpha = .7, bins = 15) +
   scale_colour_manual("", values = c("#cb1d27")) +
-  labs(title = "Distribution de la part des femmes dans les cohortes", x = "Pourcentage de femmes", y = "Densité") +
+  labs(title = "Distribution de la part des femmes dans les cohortes", x = "Pourcentage de femmes", y = "Nombre de cohortes",
+       caption = "Interprétation : Environ 4500 cohortes sont composées de 55% à 60% de femmes") +
   theme_classic() +
   scale_x_continuous(labels = scales::percent, limits = c(0,1)) +
-  #geom_vline(xintercept = .5, linetype = 2, col = "#666666", linewidth = .7) +
   geom_vline(xintercept = mean(table_femmes$percent), linetype = 2, col = "#666666", linewidth = .9) +
-  geom_label(aes(x = mean(table_femmes$percent)+.03, y = 2.3, label = paste("Moyenne de", round(mean(table_femmes$percent)*100, 0), "%")), 
+  geom_label(aes(x = moy+.03, y = 4800, label = paste("Moyenne de", round(moy*100, 0), "%")), 
             col = "#666666", size = 5, hjust = 0, fontface = "italic", family = "Helvetica", fill = "white", label.size = NA) +
   custom_theme() +
   theme(plot.title = ggplot2::element_text(size = 18))
+graph
 ggsave(file = "figures/distribution_femmes_cohortes.png", plot = graph, width = 9, height = 5)
 
 
-# Sexe des étudiants par dicipline
+# Sexe des étudiants par académie (en nombre de cohortes)
     # Préparation des données
 table <- cohortes_unnest |> 
     left_join(formations |> select(cohorte, academie), join_by("parcours_annee" == "cohorte")) |> 
@@ -201,11 +206,19 @@ table <- cohortes_unnest |>
 #      arrange(desc(mediane))
 graph <- table |> 
     filter(academie %in% c("Mayotte", "Polynésie Française", "Guadeloupe", "Guyane", "Nouvelle Calédonie", "La Réunion", "Martinique", "Aix-Marseille", "Dijon", "Corse")) |> 
-    ggplot(aes(x = academie, y=percent)) + 
-      geom_violin(trim = F, fill = "#fd710f", color = "#fe9c57", position="identity", alpha = .7, scale = "width") + #scale pour avoir même hauteur
+    mutate(min = round(min(percent, na.rm = T)*100, 0),
+           max = round(max(percent, na.rm = T)*100, 0),
+           moy = round(mean(percent, na.rm = TRUE)*100, 0),
+           med = round(median(percent, na.rm = TRUE)*100, 0),
+           .by = academie) |> 
+    ggplot(aes(x = academie, y=percent, 
+               tooltip = paste("Académie :", academie, "\nPourcentage de femmes : entre", min, "% et", max, 
+                               "% \nMoyenne :", moy, "% \nMédiane :", med, "%"))) + 
+      geom_violin_interactive(trim = F, fill = "#fd710f", color = "#fe9c57", position="identity", alpha = .7, scale = "width") + #scale pour avoir même hauteur
       labs(x = "Academie", y = "Pourcentage de femmes", 
            title = "Les 10 des academies ayant la part de femmes la plus élevée", 
-           subtitle = "Basé sur les parcours étudiants rattachés à une unique academie") +
+           subtitle = "Basé sur les parcours étudiants rattachés à une unique academie",
+           caption = "En Polynésie Française, la moitié des cohortes a moins de 68% de femmes et l'autre moitié \na plus de 68% de femmes, et la part moyenne de femmes est de 63%") +
       theme_classic() +
       scale_y_continuous(labels = scales::percent, limits = c(0,1)) +
       geom_hline(yintercept = .5, linetype = 2, col = "#666666", linewidth = .7) +
@@ -213,14 +226,24 @@ graph <- table |>
       custom_theme() +
       theme(panel.grid.major.x = ggplot2::element_line(color = "#cbcbcb"),
             panel.grid.major.y = ggplot2::element_blank()) #10 académies sur 34 en tout
-ggsave(file = "figures/academie_plus_femmes.png", plot = graph, width = 10, height = 5)
+ggraph <- girafe(print(graph), width_svg = 11, height_svg = 6)
+saveWidget(ggraph, file = "figures/academie_plus_femmes.html")
+
 graph <- table |> 
     filter(academie %in% c("Versailles", "Normandie", "Créteil", "Grenoble", "Rennes", "Limoges", "Poitiers", "Toulouse", "Lille", "Amiens")) |> 
-    ggplot(aes(x = academie, y=percent)) + 
-      geom_violin(trim = F, fill = "#fe44d5", color = "#fe7ce2", position="identity", alpha = .7, scale = "width") + #scale pour avoir même hauteur
+    mutate(min = round(min(percent, na.rm = T)*100, 0),
+           max = round(max(percent, na.rm = T)*100, 0),
+           moy = round(mean(percent, na.rm = TRUE)*100, 0),
+           med = round(median(percent, na.rm = TRUE)*100, 0),
+           .by = academie)  |> 
+    ggplot(aes(x = academie, y=percent, 
+               tooltip = paste("Académie :", academie, "\nPourcentage de femmes : entre", min, "% et", max, 
+                               "% \nMoyenne :", moy, "% \nMédiane :", med, "%"))) + 
+      geom_violin_interactive(trim = F, fill = "#fe44d5", color = "#fe7ce2", position="identity", alpha = .7, scale = "width") + #scale pour avoir même hauteur
       labs(x = "Academie", y = "Pourcentage de femmes", 
            title = "Les 10 des academies ayant la part de femmes la plus faible", 
-           subtitle = "Basé sur les parcours étudiants rattachés à une unique academie") +
+           subtitle = "Basé sur les parcours étudiants rattachés à une unique academie",
+           caption = "En Normandie, la part des femmes varie entre 35 et 64%, pour une part moyenne de 51%") +
       theme_classic() +
       scale_y_continuous(labels = scales::percent, limits = c(0,1)) +
       geom_hline(yintercept = .5, linetype = 2, col = "#666666", linewidth = .7) +
@@ -228,7 +251,8 @@ graph <- table |>
       custom_theme() +
       theme(panel.grid.major.x = ggplot2::element_line(color = "#cbcbcb"),
             panel.grid.major.y = ggplot2::element_blank())
-ggsave(file = "figures/academie_moins_femmes.png", plot = graph, width = 10, height = 5)
+ggraph <- girafe(print(graph), width_svg = 11, height_svg = 6)
+saveWidget(ggraph, file = "figures/academie_moins_femmes.html")
 
 
 # Spécialités au bac
@@ -244,16 +268,21 @@ graph <- table |>
     filter(row_number() <= 10) |> 
     mutate(couple_spe = fct_reorder(couple_spe, effectif_couple_spe)) |> 
     ggplot() + 
-    geom_bar(aes(y=effectif_couple_spe, x=couple_spe),
+    geom_bar_interactive(aes(y=effectif_couple_spe, x=couple_spe, 
+                             tooltip = paste("Couple de spécialités :", couple_spe, "\nNombre d'étudiants :", 
+                                             format(as.integer(effectif_couple_spe), nsmall = 1, big.mark = "."))),
              position="dodge", stat="identity", width=.6, alpha = .7, fill = "#fd710f") +
     labs(x = "", y = "Nombre d'étudiants", linetype = "",
-         title = stringr::str_wrap("Les 10 couples de spécialités les plus choisis par les étudiants", width = 40)) +
+         title = stringr::str_wrap("Les 10 couples de spécialités les plus choisis par les étudiants", width = 40),
+         caption = "Depuis 2021, près de 95.000 étudiants ont choisi les spécialités\nmathématiques et physique chimie") +
     coord_flip() +
+    scale_y_continuous(labels = scales::comma) +
     theme_classic() +
     custom_theme() +
     theme(panel.grid.major.x = ggplot2::element_line(color = "#cbcbcb"),
           panel.grid.major.y = ggplot2::element_blank())
-ggsave(file = "figures/top10_specialites.png", plot = graph, width = 8, height = 5)
+ggraph <- girafe(print(graph), width_svg = 8, height_svg = 5)
+saveWidget(ggraph, file = "figures/top10_specialites.html")
 
 
 # Disciplines selon spécialités
@@ -265,22 +294,27 @@ table <- cohorte_spe |>
     distinct(cohorteid, couple_spe, effectif_couple_spe) |> #40.120 cohortes ayant les 10 couples de spé les plus choisis
     left_join(cohortes_unnest, by = "cohorteid") |> 
     left_join(formations |> select(cohorte, nom_discipline, nom_long_discipline), join_by("parcours_annee" == "cohorte")) |> 
-    summarise(somme = sum(effectif_couple_spe, na.rm = TRUE), .by = c(nom_discipline, couple_spe)) 
+    mutate(somme = sum(effectif_couple_spe, na.rm = TRUE), .by = c(nom_discipline, couple_spe)) |> 
+    distinct(nom_discipline, couple_spe, somme, nom_long_discipline)
     
     # Dataviz
 graph <- table |> 
     filter(!is.na(nom_discipline)) |>
     arrange(nom_discipline) |> 
     mutate(nom_discipline = factor(nom_discipline, levels = rev(unique(nom_discipline)))) |> 
-    ggplot(aes(couple_spe, nom_discipline, fill= somme)) + 
-        geom_tile() +
+    ggplot(aes(couple_spe, nom_discipline, fill= somme, 
+               tooltip = paste("Spécialités :", couple_spe, "\nDiscipline :", toTitleCase(tolower(nom_long_discipline)),
+                               "\nNombre d'étudiants :", format(as.integer(somme), nsmall = 1, big.mark = ".")))) + 
+        geom_tile_interactive() +
         theme_classic() +
         guides(fill = guide_legend(title = "", reverse = FALSE)) +
         labs(title = stringr::str_wrap("Disciplines des formations des étudiants pour les 10 couples de spécialités les plus choisis", width = 70), 
-             y = "Discipline de formation", x = "Couple de spécialités") +
+             y = "Discipline de formation", x = "Couple de spécialités",
+             caption = "Plus de 82.000 étudiants ayant choisi les spécialités mathématiques et physique chimie au baccalauréat \nont suivi une formation dans la discipline des sciences fondamentales et applications") +
         scale_fill_distiller(palette = "RdPu", direction = 1) +    
         custom_theme() +
-        theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1),
-              plot.margin = margin(50, 0, 0, 0))
-ggraph <- ggplotly(graph)
+        theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, margin = margin(t = -20, r = 0, b = 40, l = 0)),
+              plot.margin = margin(50, 0, 10, 0))
+ggraph <- girafe(print(graph), width_svg = 11, height_svg = 9)
 saveWidget(ggraph, file = "figures/disciplines_specialites.html")
+

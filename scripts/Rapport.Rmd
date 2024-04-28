@@ -73,7 +73,7 @@ etablissement <- read_delim("../data/Referentiels/organismes-2024-04-22.csv", ";
 ```
 
 
-```{r}
+```{r unnest cohortes}
 ## Cohortes
 cohortes_unnest <- cohortes |> 
     select(-reussites) |> 
@@ -224,23 +224,23 @@ print(dfSummary(cohorte_sexe, style = "grid", graph.magnif = 1,
 
 <br>
 
-<p align="center">
- <img src="../figures/academie_plus_femmes.png">
-</p>
+<div align="center">
+<iframe frameborder="0" width="800" height="600" src="../figures/academie_plus_femmes.html"></iframe>
+</div>
 
 
 <br>
 
-<p align="center">
- <img src="../figures/academie_moins_femmes.png">
-</p>
+<div align="center">
+<iframe frameborder="0" width="800" height="600" src="../figures/academie_moins_femmes.html"></iframe>
+</div>
 
 
 <br>
 
-<p align="center">
- <img src="../figures/top10_specialites.png">
-</p>
+<div align="center">
+<iframe frameborder="0" width="800" height="600" src="../figures/top10_specialites.html"></iframe>
+</div>
 
 
 <br>
