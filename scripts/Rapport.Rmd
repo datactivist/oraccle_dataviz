@@ -229,21 +229,17 @@ print(dfSummary(cohorte_sexe, style = "grid", graph.magnif = 1,
 </div>
 
 
-<br>
 
 <div align="center">
 <iframe frameborder="0" width="800" height="600" src="../figures/academie_moins_femmes.html"></iframe>
 </div>
 
 
-<br>
-
 <div align="center">
 <iframe frameborder="0" width="800" height="600" src="../figures/top10_specialites.html"></iframe>
 </div>
 
 
-<br>
 
 
 <div align="center">

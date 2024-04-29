@@ -178,7 +178,7 @@ graph <- ggplot(data = table_femmes) +
                              fill = "#fd710f", col = "white", alpha = .7, bins = 15) +
   scale_colour_manual("", values = c("#cb1d27")) +
   labs(title = "Distribution de la part des femmes dans les cohortes", x = "Pourcentage de femmes", y = "Nombre de cohortes",
-       caption = "Interprétation : Environ 4500 cohortes sont composées de 55% à 60% de femmes") +
+       caption = "Environ 4500 cohortes sont composées de 55% à 60% de femmes") +
   theme_classic() +
   scale_x_continuous(labels = scales::percent, limits = c(0,1)) +
   geom_vline(xintercept = mean(table_femmes$percent), linetype = 2, col = "#666666", linewidth = .9) +
@@ -263,6 +263,16 @@ table <- cohorte_spe |>
     arrange(desc(effectif_couple_spe)) |> 
     filter(couple_spe != "NA - NA")
 ref_top10_spe <- table |> filter(row_number() <= 10)
+
+# table <- cohorte_spe |> 
+#     mutate(couple_spe = paste(bac_spe1, "-", bac_spe2)) |> 
+#     mutate(effectif_couple_spe = sum(effectif, na.rm = TRUE), .by = c(cohorteid, couple_spe)) |> 
+#     distinct(cohorteid, couple_spe, effectif_couple_spe) |> 
+#     filter(effectif_couple_spe > 0, couple_spe != "NA - NA") |> 
+#     left_join(cohorte_anbac, by = "cohorteid") |> 
+#     mutate(somme = sum(effectif_couple_spe, na.rm = TRUE), .by = c(anbac, couple_spe)) |> 
+#     distinct(nom_discipline, couple_spe, somme, nom_long_discipline)
+
     # Dataviz
 graph <- table |> 
     filter(row_number() <= 10) |> 
@@ -294,6 +304,7 @@ table <- cohorte_spe |>
     distinct(cohorteid, couple_spe, effectif_couple_spe) |> #40.120 cohortes ayant les 10 couples de spé les plus choisis
     left_join(cohortes_unnest, by = "cohorteid") |> 
     left_join(formations |> select(cohorte, nom_discipline, nom_long_discipline), join_by("parcours_annee" == "cohorte")) |> 
+    filter(n_distinct(nom_discipline) == 1, .by = cohorteid) |> 
     mutate(somme = sum(effectif_couple_spe, na.rm = TRUE), .by = c(nom_discipline, couple_spe)) |> 
     distinct(nom_discipline, couple_spe, somme, nom_long_discipline)
     
@@ -308,9 +319,10 @@ graph <- table |>
         geom_tile_interactive() +
         theme_classic() +
         guides(fill = guide_legend(title = "", reverse = FALSE)) +
-        labs(title = stringr::str_wrap("Disciplines des formations des étudiants pour les 10 couples de spécialités les plus choisis", width = 70), 
+        labs(title = stringr::str_wrap("Disciplines de formation des étudiants pour les 10 couples de spécialités les plus choisis", width = 70), 
+             subtitle = "Données des formations rattachées à une unique discipline",
              y = "Discipline de formation", x = "Couple de spécialités",
-             caption = "Plus de 82.000 étudiants ayant choisi les spécialités mathématiques et physique chimie au baccalauréat \nont suivi une formation dans la discipline des sciences fondamentales et applications") +
+             caption = "Près 80.000 étudiants ayant choisi les spécialités mathématiques et physique chimie au baccalauréat \nont suivi une formation dans la discipline des sciences fondamentales et applications") +
         scale_fill_distiller(palette = "RdPu", direction = 1) +    
         custom_theme() +
         theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, margin = margin(t = -20, r = 0, b = 40, l = 0)),
