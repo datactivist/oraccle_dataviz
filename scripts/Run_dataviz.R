@@ -10,6 +10,7 @@ library(rvest)
 library(summarytools)
 library(htmlwidgets)
 library(ggiraph)
+library(tools)
 
 # Import données Oraccle
 cohortes_age_premiereins <- read_delim("./data/Oraccle/cohorte_age_premiereins.csv", ",")
@@ -91,6 +92,11 @@ formations <- formations |>
 #            secteur_discipline_oraccle = id_secteur_discipline, 
 #            secteur_discipline_sise = SECTEUR_DISCIPLINAIRE_SISE) #252 secteurs différents
 #rio::export(diff_secteur_discipline, "./data/Export/diff_secteur_discipline.csv")
+
+#a <- table(cohorte_spe$bac_spe1) |> as.data.frame() |> rename(bac_spe1=Var1, nb_ocurrences = Freq) |> arrange(desc(nb_ocurrences))
+#rio::export(a, "./data/Export/valeurs_specialite1_bac.csv")
+#b <- table(cohorte_spe$bac_spe2) |> as.data.frame() |> rename(bac_spe2=Var1, nb_ocurrences = Freq) |> arrange(desc(nb_ocurrences))
+#rio::export(b, "./data/Export/valeurs_specialite2_bac.csv")
 
 
 ## Cohortes
@@ -217,7 +223,7 @@ graph <- table |>
       geom_violin_interactive(trim = F, fill = "#fd710f", color = "#fe9c57", position="identity", alpha = .7, scale = "width") + #scale pour avoir même hauteur
       labs(x = "Academie", y = "Pourcentage de femmes", 
            title = "Les 10 des academies ayant la part de femmes la plus élevée", 
-           subtitle = "Basé sur les parcours étudiants rattachés à une unique academie",
+           subtitle = "Basé sur les parcours étudiants rattachés à une unique academie (soit 44% \nde tous les parcours)",
            caption = "En Polynésie Française, la moitié des cohortes a moins de 68% de femmes et l'autre moitié \na plus de 68% de femmes, et la part moyenne de femmes est de 63%") +
       theme_classic() +
       scale_y_continuous(labels = scales::percent, limits = c(0,1)) +
@@ -242,7 +248,7 @@ graph <- table |>
       geom_violin_interactive(trim = F, fill = "#fe44d5", color = "#fe7ce2", position="identity", alpha = .7, scale = "width") + #scale pour avoir même hauteur
       labs(x = "Academie", y = "Pourcentage de femmes", 
            title = "Les 10 des academies ayant la part de femmes la plus faible", 
-           subtitle = "Basé sur les parcours étudiants rattachés à une unique academie",
+           subtitle = "Basé sur les parcours étudiants rattachés à une unique academie (soit 44% de \ntous les parcours)",
            caption = "En Normandie, la part des femmes varie entre 35 et 64%, pour une part moyenne de 51%") +
       theme_classic() +
       scale_y_continuous(labels = scales::percent, limits = c(0,1)) +
@@ -319,8 +325,8 @@ graph <- table |>
         geom_tile_interactive() +
         theme_classic() +
         guides(fill = guide_legend(title = "", reverse = FALSE)) +
-        labs(title = stringr::str_wrap("Disciplines de formation des étudiants pour les 10 couples de spécialités les plus choisis", width = 70), 
-             subtitle = "Données des formations rattachées à une unique discipline",
+        labs(title = stringr::str_wrap("Disciplines de formation des étudiants selon les spécialités choisis au baccalauréat", width = 70), 
+             subtitle = "Données des formations rattachées à une unique discipline et des 10 couples \nde spécialités les plus choisies (soit 39% de tous les parcours)",
              y = "Discipline de formation", x = "Couple de spécialités",
              caption = "Près 80.000 étudiants ayant choisi les spécialités mathématiques et physique chimie au baccalauréat \nont suivi une formation dans la discipline des sciences fondamentales et applications") +
         scale_fill_distiller(palette = "RdPu", direction = 1) +    
@@ -328,5 +334,6 @@ graph <- table |>
         theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, margin = margin(t = -20, r = 0, b = 40, l = 0)),
               plot.margin = margin(50, 0, 10, 0))
 ggraph <- girafe(print(graph), width_svg = 11, height_svg = 9)
+ggraph
 saveWidget(ggraph, file = "figures/disciplines_specialites.html")
 
