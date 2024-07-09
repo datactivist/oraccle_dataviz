@@ -247,6 +247,7 @@ print(dfSummary(cohorte_sexe, style = "grid", graph.magnif = 1,
 </div>
 
 
+
 <div class = "tocify-extend-page" data-unique = "tocify-extend-page" style = "height: 0;"></div>
 
 
