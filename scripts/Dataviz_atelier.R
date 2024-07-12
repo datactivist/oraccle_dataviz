@@ -6,6 +6,8 @@ library(plotly)
 library(treemap)
 library(treemapify)
 library(cowplot)
+library(igraph)
+library(ggraph)
 
 # Import données Oraccle : https://data.unif.app/data/avril2024/Ile-de-France/
 cohortes_age_premiereins <- read_delim("https://data.unif.app/data/avril2024/Ile-de-France/cohorte_age_premiereins.csv", ",")
@@ -19,13 +21,13 @@ cohortes <- read_delim("https://data.unif.app/data/avril2024/Ile-de-France/cohor
 formations <- read_delim("https://data.unif.app/data/avril2024/Ile-de-France/formations.csv", ",") #Année-Diplome-Etablissement
 
 # Import données référentiels
-academie <- read_csv("../data/Referentiels/n_academie_et_assimile_.csv", locale = locale(encoding = "ISO-8859-1"))
-groupe_discipline <- read_csv("../data/Referentiels/n_groupe_discipline_sise_.csv", locale = locale(encoding = "ISO-8859-1"))
-secteur_discipline <- read_csv("../data/Referentiels/n_secteur_disciplinaire_sise_.csv", locale = locale(encoding = "ISO-8859-1"))
-discipline <- read_csv("../data/Referentiels/n_discipline_sise_.csv", locale = locale(encoding = "ISO-8859-1"))
-diplome <- read_csv("../data/Referentiels/n_diplome_sise_.csv", locale = locale(encoding = "ISO-8859-1"))
-type_diplome <- read_csv("../data/Referentiels/n_type_diplome_sise_.csv", locale = locale(encoding = "ISO-8859-1"))
-etablissement <- read_delim("../data/Referentiels/organismes-2024-04-22.csv", ";")
+academie <- read_csv("./data/Referentiels/n_academie_et_assimile_.csv", locale = locale(encoding = "ISO-8859-1"))
+groupe_discipline <- read_csv("./data/Referentiels/n_groupe_discipline_sise_.csv", locale = locale(encoding = "ISO-8859-1"))
+secteur_discipline <- read_csv("./data/Referentiels/n_secteur_disciplinaire_sise_.csv", locale = locale(encoding = "ISO-8859-1"))
+discipline <- read_csv("./data/Referentiels/n_discipline_sise_.csv", locale = locale(encoding = "ISO-8859-1"))
+diplome <- read_csv("./data/Referentiels/n_diplome_sise_.csv", locale = locale(encoding = "ISO-8859-1"))
+type_diplome <- read_csv("./data/Referentiels/n_type_diplome_sise_.csv", locale = locale(encoding = "ISO-8859-1"))
+etablissement <- read_delim("./data/Referentiels/organismes-2024-04-22.csv", ";")
 
 # Import référentiels ortho-typographiés
 diplome_OT <- read_delim("https://data.pages.unif.app/html/ortho/ortho_diplomes.csv", "|")
@@ -104,6 +106,7 @@ formations_enrichies <- formations |>
            nom_long_discipline, id_groupe_discipline, nom_groupe_discipline, id_secteur_discipline, nom_secteur_discipline, #id_etablissement, 
            nom_etablissement, adresse_etablissement, academie) |> 
     distinct()
+rio::export(formations_enrichies, "./data/Export/formations_enrichies.csv")
 
 # Nettoyage
 #formations_enrichies <- read_csv("data/Export/formations_enrichies.csv")
@@ -117,99 +120,13 @@ cohortes_unnest <- cohortes |>
            etablissement = str_extract_all(parcours_annee, "([^\\-]+)$"))   #extract characters after last -
 cohortes_unnest_enrichies <- cohortes_unnest |> 
     left_join(formations_enrichies, by = c("parcours_annee" = "cohorte"))
-
-
-
+rio::export(cohortes_unnest, "./data/Export/cohortes_unnest.csv")
+rio::export(cohortes_unnest_enrichies, "./data/Export/cohortes_unnest_enrichies.csv")
 
 
 
 
       ###### Data-visualisation issues de l'atelier
-
-# Custom_theme pour ggplot
-custom_theme <- function (){
-    font <- "Helvetica"
-    ggplot2::theme(plot.title = ggplot2::element_text(family = font,size = 19, face = "bold", color = "#222222"), 
-        plot.subtitle = ggplot2::element_text(family = font,size = 18, face = "italic", margin = ggplot2::margin(0, 0, 9, 0)), 
-        plot.caption = ggplot2::element_text(family = font,size = 15, face = "italic", color = "#666666", margin = ggplot2::margin(9, 0, 9, 0)), 
-        plot.tag = ggplot2::element_text(size = 15),
-        #plot.tag.position = "topright",
-        plot.caption.position = "plot",
-        legend.title = ggplot2::element_text(family = font, size = 18, color = "#222222"), 
-        legend.position = "top", 
-        legend.text.align = 0, 
-        legend.background = ggplot2::element_blank(),
-        legend.key = ggplot2::element_blank(),
-        legend.text = ggplot2::element_text(family = font, size = 18,color = "#222222"), 
-        axis.text = ggplot2::element_text(family = font, size = 15,color = "#222222"), 
-        axis.text.x = ggplot2::element_text(margin = ggplot2::margin(5,b = 10), size = 12), 
-        axis.text.y = ggplot2::element_text(margin = ggplot2::margin(5,b = 20), size = 12), 
-        axis.title = ggplot2::element_text(family = font, size = 18,color = "#222222"),
-        axis.ticks = ggplot2::element_blank(),
-        axis.line = ggplot2::element_blank(), 
-        panel.grid.minor = ggplot2::element_blank(),
-        panel.grid.major.y = ggplot2::element_line(color = "#cbcbcb"),
-        panel.grid.major.x = ggplot2::element_blank(), 
-        panel.background = ggplot2::element_blank(),
-        strip.background = ggplot2::element_rect(fill = "white"),
-        strip.text = ggplot2::element_text(size = 22, hjust = 0, face = "bold"))
-}
-
-
-
-# Données transformées
-formations_enrichies <- formations |> 
-    left_join(academie |> select(ACADEMIE_ET_ASSIMILE, LIBELLE_70), by = c("acaeta" = "ACADEMIE_ET_ASSIMILE")) |> 
-    left_join(etablissement |> 
-                  distinct(`UAI validée`, `Raison sociale`, `Adresse`, `Nature`) |> 
-                  group_by(`UAI validée`) |> 
-                  arrange(Nature) |> 
-                  filter(row_number() == 1, !is.na(`UAI validée`)), 
-              by = c("compos" = "UAI validée")) |> 
-    mutate(cursus_lmd = case_when(cursus_lmd == "L" ~ "Licence",
-                                  cursus_lmd == "M" ~ "Master",
-                                  cursus_lmd == "D" ~ "Doctorat", 
-                                  .default = NA_character_)) |> 
-    left_join(diplome |> select(DIPLOME_SISE, LIBELLE_INTITULE_1, TYPE_DIPLOME_SISE, SECTEUR_DISCIPLINAIRE_SISE), by = c("diplom" = "DIPLOME_SISE")) |> 
-    left_join(discipline |> select(DISCIPLINE_SISE, LIBELLE_COURT, LIBELLE_DISCIPLINE_60), by = c("discipli" = "DISCIPLINE_SISE")) |> 
-    left_join(groupe_discipline |> select(GROUPE_DISCIPLINE_SISE, LIBELLE_LONG), by = c("groupe" = "GROUPE_DISCIPLINE_SISE")) |> 
-    left_join(secteur_discipline |> select(SECTEUR_DISCIPLINAIRE_SISE, LIBELLE_SECTEUR_DISCIPLINAIRE), by = c("sectdis" = "SECTEUR_DISCIPLINAIRE_SISE")) |> 
-    left_join(type_diplome |> select(TYPE_DIPLOME_SISE, LIBELLE_LONG), by = c("typ_dipl" = "TYPE_DIPLOME_SISE")) |> 
-    rename(cohorte = formation,
-           academie = LIBELLE_70,
-           id_etablissement = etabli, #pas d'erreur sur cette colonne
-           nom_etablissement = `Raison sociale`,
-           adresse_etablissement = Adresse,
-           degre_etude = degetu, #pas d'erreur sur cette colonne (extraction du premier caractère et correspond bien à la colonne `degetu`)
-           id_diplome = diplom, #pas d'erreur sur cette colonne
-           nom_diplome = LIBELLE_INTITULE_1,
-           id_discipline = discipli,
-           nom_discipline = LIBELLE_COURT,
-           nom_long_discipline = LIBELLE_DISCIPLINE_60,
-           id_groupe_discipline = groupe,
-           nom_groupe_discipline = LIBELLE_LONG.x,
-           id_secteur_discipline = SECTEUR_DISCIPLINAIRE_SISE,
-           nom_secteur_discipline = LIBELLE_SECTEUR_DISCIPLINAIRE,
-           id_type_diplome = TYPE_DIPLOME_SISE,
-           nom_type_diplome = LIBELLE_LONG.y) |> 
-    select(cohorte, degre_etude, cycle, cursus_lmd, id_diplome, nom_diplome, id_type_diplome, nom_type_diplome, id_discipline, nom_discipline, 
-           nom_long_discipline, id_groupe_discipline, nom_groupe_discipline, id_secteur_discipline, nom_secteur_discipline, #id_etablissement, 
-           nom_etablissement, adresse_etablissement, academie) |> 
-    distinct()
-
-# Nettoyage
-#formations_enrichies <- read_csv("data/Export/formations_enrichies.csv")
-cohortes_unnest <- cohortes |> 
-    select(-reussites) |> 
-    mutate(parcours_annee = strsplit(as.character(trace), "\\+")) |> 
-    unnest(parcours_annee) |> 
-    mutate(parcours_annee = strsplit(as.character(parcours_annee), "&")) |> 
-    unnest(parcours_annee) |> 
-    mutate(formation = str_extract_all(parcours_annee, "(?<=-)([^-&]+)(?=-)"), #extract characters between - and -
-           etablissement = str_extract_all(parcours_annee, "([^\\-]+)$"))   #extract characters after last -
-cohortes_unnest_enrichies <- cohortes_unnest |> 
-    left_join(formations_enrichies, by = c("parcours_annee" = "cohorte"))
-
 
 
     ## Dataviz n°2 : Parcours et pourcentage de réussites des spécialités SVT et Maths au bac
@@ -262,15 +179,22 @@ suite_top10 <- aretes |>
   filter(from %in% top10_post_spe$to) |> 
   na.omit() |> 
   filter(`Nombre d'étudiants` > 100)
-aretes_filtre <- rbind(top10_post_spe, suite_top10) |> na.omit() #|> 
-  #mutate(weight_normalized = (`Nombre d'étudiants` - min(`Nombre d'étudiants`)) / (max(`Nombre d'étudiants`) - min(`Nombre d'étudiants`))) |> 
-  #mutate(alpha_var = weight_normalized * (1 - .8) + .8)
+aretes_filtre <- rbind(top10_post_spe, suite_top10) |> na.omit() 
 
   # Noeuds
 noeuds <- rbind(aretes_filtre |> select(from) |> rename(name = from) |> mutate(group = "Inscription 1ère année"),
                 aretes_filtre |> select(to) |> rename(name = to) |> mutate(group = "Inscription 2è année")) |> 
   mutate(group = ifelse(name == "MATHS - SVT", "Spécialités au BAC", group)) |> 
-  distinct() |> slice(1, .by = name) 
+  distinct() |> slice(1, .by = name)  |> 
+      # Placement manuel des textes au-dessus des points selon leur longueur (le str_wrap ajoutait des espaces après le texte)
+  mutate(wrapped_text = str_wrap(name, width = 25),  
+         count_newline = str_count(wrapped_text, "\n"),
+         ypos = case_when(count_newline == 0 ~ -2, 
+                          count_newline == 1 ~ -2+count_newline,
+                          count_newline == 2 ~ -2.5+count_newline,
+                          count_newline == 3 ~ -3.3+count_newline,
+                          count_newline == 4 ~ -3.5+count_newline,
+                          .default = -4+count_newline))
 
 # Création de l'objet graphe
 graph <- graph_from_data_frame(d = aretes_filtre, vertices=noeuds, directed = TRUE)
@@ -289,7 +213,7 @@ reseau <- ggraph(graph, layout = 'stress') +
   geom_edge_link(aes(width = `Nombre d'étudiants`), arrow = arrow(length = unit(4, 'mm')), end_cap = circle(6, 'mm'), color = "grey", alpha = 0.8) + 
   geom_edge_loop(aes(width = `Nombre d'étudiants`), arrow = arrow(length = unit(4, 'mm')), end_cap = circle(4, 'mm'), color = "grey", alpha = 0.8) +   
   geom_node_point(aes(color = factor(group, levels = c("Spécialités au BAC", "Inscription 1ère année", "Inscription 2è année"))), size = 10) + 
-  geom_node_text(aes(label = wrap_text(name, width = 25)), vjust = -1.5, hjust = 0, size = 5) + 
+  geom_node_text(aes(label = str_wrap(name, width = 25), vjust = ypos), hjust = 0, size = 5) + 
   scale_edge_width(range = c(0.5, 5)) + 
   scale_color_manual(values = c("Spécialités au BAC" = "#345E68", "Inscription 1ère année" = "#FEDEA0", "Inscription 2è année" = "#B7C2A5")) +
   labs(title = "Diplômes universitaires des bacheliers aux spécialités SVT et Maths en Ile-de-France",
@@ -299,10 +223,9 @@ reseau <- ggraph(graph, layout = 'stress') +
         legend.title = ggplot2::element_text(size = 18, color = "#222222"), 
         legend.text = ggplot2::element_text(size = 18,color = "#222222"), 
         legend.box = "vertical", legend.box.just = "left",
-       # legend.margin = margin(t = -100, r = 0, b = 100, l = 0),
         plot.title = ggplot2::element_text(size = 21, face = "bold", color = "#222222"), 
         plot.subtitle = ggplot2::element_text(size = 18, face = "italic", margin = ggplot2::margin(0, 0, 9, 0))) +
-  guides(color = guide_legend(nrow = 1, byrow = TRUE, title = "Discipline", override.aes = list(lwd = 2)),
+  guides(color = guide_legend(nrow = 1, byrow = TRUE, title = "Parcours", override.aes = list(lwd = 2)),
          width = guide_legend(override.aes = list(lwd = 20)))
 ggsave(file = "figures/dataviz_atelier/reseau_diplomes_svt_maths.png", plot = reseau, width = 13, height = 9)
 
