@@ -129,6 +129,44 @@ rio::export(cohortes_unnest_enrichies, "./data/Export/cohortes_unnest_enrichies.
       ###### Data-visualisation issues de l'atelier
 
 
+    ## Dataviz n°2 : Autre graph de répartition des étudiants dans les formations
+
+
+# Préparation des données
+table <- cohortes_unnest_enrichies |> 
+  distinct(cohorteid, effectif, id_diplome) |> 
+  left_join(diplome_OT |> 
+            mutate(nom_formation = gsub("^(\\w)(\\w+)", "\\U\\1\\L\\2", tolower(LIBELLE_INTITULE_1), perl = TRUE)) |> 
+            select(c(DIPLOME_SISE, nom_formation)), 
+          by = c("id_diplome" = "DIPLOME_SISE")) |> 
+  mutate(effectif = ifelse(effectif == 0, 1.148, effectif)) |> 
+  summarise(nb_etudiants = round(sum(effectif), 0), .by = nom_formation) |> 
+  mutate(percent = round(nb_etudiants / sum(nb_etudiants) * 100, 0))
+
+# Visualisation
+graph <- table |> 
+  arrange(desc(nb_etudiants)) |> 
+  filter(row_number() <= 10) |> 
+  mutate(nom_formation = fct_reorder(nom_formation, nb_etudiants)) |> 
+  ggplot() +
+    aes(x = nom_formation, y = nb_etudiants) +
+    geom_col(fill = "#345E68") +
+    labs(
+      x = "Formations choisies",
+      y = "Nombre d'étudiants",
+      title = "Top 10 des formations les plus choisies par les étudiants d'Ile-de-France"
+    ) +
+    coord_flip() +
+    scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) +
+    geom_label(aes(y = nb_etudiants + 0.08*max(nb_etudiants), label = paste0(percent, "%")), size = 5, fill = "white", label.size = NA) +
+    scale_y_continuous(labels = scales::comma) +
+    custom_theme() +
+    theme(plot.title.position = "plot",
+          panel.grid.major.x = ggplot2::element_line(color = "#cbcbcb"),
+          panel.grid.major.y = ggplot2::element_blank())
+ggsave(file = "figures/dataviz_atelier/top10_formations.png", plot = graph, width = 10, height = 6)
+
+
     ## Dataviz n°2 : Parcours et pourcentage de réussites des spécialités SVT et Maths au bac
 
 
@@ -137,7 +175,10 @@ rio::export(cohortes_unnest_enrichies, "./data/Export/cohortes_unnest_enrichies.
 #  Liste des cohortes avec les spécialités Maths et SVT au bac
 specialites <- cohorte_spe |> 
     mutate(couple_spe = paste(bac_spe1, "-", bac_spe2)) |> 
-    filter(couple_spe == "MATHS - SVT")
+    filter(couple_spe == "MATHS - SVT") |> 
+    left_join(specialites_bac_OT, by = c("bac_spe1" = "libelle_sise")) |> 
+    left_join(specialites_bac_OT, by = c("bac_spe2" = "libelle_sise")) |> 
+    mutate(couple_spe_complet = paste(libelle.x, "-", libelle.y))
 
 # Filtre des cohortes appartenant à la liste
 filtre_spe_cohortes <- cohortes |> 
@@ -146,7 +187,7 @@ filtre_spe_cohortes <- cohortes |>
     mutate(trace_save = trace) |> 
     separate(trace, into = c("V1", "V2", "V3"), sep = "\\+") |> 
     mutate(across(starts_with("V"), ~str_extract(., "^[^&]+")),
-           V0 = "MATHS - SVT") |> 
+           V0 = "Mathématiques - Sciences de la vie et de la Terre") |> #MATHS - SVT
     #extraction des intitulés de formation
     mutate(formation_V1 = as.character(str_extract_all(V1, "(?<=-)([^-&]+)(?=-)")), #extract characters between - and -
            formation_V2 = as.character(str_extract_all(V2, "(?<=-)([^-&]+)(?=-)"))) |> 
@@ -159,6 +200,7 @@ filtre_spe_cohortes <- cohortes |>
                 mutate(nom_formation_V2 = gsub("^(\\w)(\\w+)", "\\U\\1\\L\\2", tolower(LIBELLE_INTITULE_1), perl = TRUE)) |> 
                 select(c(DIPLOME_SISE, nom_formation_V2)), 
               by = c("formation_V2" = "DIPLOME_SISE")) |> 
+    mutate(effectif = ifelse(effectif == 0, 1.148, effectif)) |> 
     mutate(spe_to_V1 = sum(effectif, na.rm = TRUE), .by = c(V0, nom_formation_V1)) |> 
     mutate(V1_to_V2 = sum(effectif, na.rm = TRUE), .by = c(nom_formation_V1, nom_formation_V2))
     
@@ -172,7 +214,7 @@ aretes <- rbind(filtre_spe_cohortes |>
                  distinct(from, to, `Nombre d'étudiants`))
     ## Filtre sur certaines aretes pour plus de lisibilité
 top10_post_spe <- aretes |> 
-  filter(from == "MATHS - SVT") |> 
+  filter(from == "Mathématiques - Sciences de la vie et de la Terre") |> 
   arrange(desc(`Nombre d'étudiants`), .by = from) |> 
   filter(row_number() <= 10)
 suite_top10 <- aretes |> 
@@ -184,7 +226,7 @@ aretes_filtre <- rbind(top10_post_spe, suite_top10) |> na.omit()
   # Noeuds
 noeuds <- rbind(aretes_filtre |> select(from) |> rename(name = from) |> mutate(group = "Inscription 1ère année"),
                 aretes_filtre |> select(to) |> rename(name = to) |> mutate(group = "Inscription 2è année")) |> 
-  mutate(group = ifelse(name == "MATHS - SVT", "Spécialités au BAC", group)) |> 
+  mutate(group = ifelse(name == "Mathématiques - Sciences de la vie et de la Terre", "Spécialités au BAC", group)) |> 
   distinct() |> slice(1, .by = name)  |> 
       # Placement manuel des textes au-dessus des points selon leur longueur (le str_wrap ajoutait des espaces après le texte)
   mutate(wrapped_text = str_wrap(name, width = 25),  
@@ -194,30 +236,39 @@ noeuds <- rbind(aretes_filtre |> select(from) |> rename(name = from) |> mutate(g
                           count_newline == 2 ~ -2.5+count_newline,
                           count_newline == 3 ~ -3.3+count_newline,
                           count_newline == 4 ~ -3.5+count_newline,
-                          .default = -4+count_newline))
+                          .default = -4+count_newline),
+         is_spe_bac = ifelse(group == "Spécialités au BAC", "1", "0"))
+
+  # Jointure des noeuds avec aretes pour colorer les flèches du graph et non les sommets selon l'année
+aretes_filtre <- aretes_filtre |> 
+  left_join(noeuds |> select(name, group), by = c("from" = "name")) |> 
+  mutate(group = case_when(group == "Spécialités au BAC" ~ "Inscription 1ère année",
+                           group == "Inscription 1ère année" ~ "Inscription 2è année",
+                           .default = group)) |> 
+  rename(Parcours = group) 
+
 
 # Création de l'objet graphe
 graph <- graph_from_data_frame(d = aretes_filtre, vertices=noeuds, directed = TRUE)
 #network <- graph_from_data_frame(d=, 
  #                                vertices=noeuds, directed=T) 
 
-# Fonction pour couper les labels trop longs
-wrap_text <- function(text, width) {
-  sapply(text, function(x) {
-    paste(strwrap(x, width = width), collapse = "\n")
-  })
-}
-
 # Création du graphique avec ggraph
 reseau <- ggraph(graph, layout = 'stress') + 
-  geom_edge_link(aes(width = `Nombre d'étudiants`), arrow = arrow(length = unit(4, 'mm')), end_cap = circle(6, 'mm'), color = "grey", alpha = 0.8) + 
-  geom_edge_loop(aes(width = `Nombre d'étudiants`), arrow = arrow(length = unit(4, 'mm')), end_cap = circle(4, 'mm'), color = "grey", alpha = 0.8) +   
-  geom_node_point(aes(color = factor(group, levels = c("Spécialités au BAC", "Inscription 1ère année", "Inscription 2è année"))), size = 10) + 
-  geom_node_text(aes(label = str_wrap(name, width = 25), vjust = ypos), hjust = 0, size = 5) + 
+  geom_edge_link(aes(width = `Nombre d'étudiants`, color = factor(Parcours, levels = c("Inscription 1ère année", "Inscription 2è année"))), 
+                     arrow = arrow(length = unit(4, 'mm')), end_cap = circle(6, 'mm')) + 
+  geom_edge_loop(aes(width = `Nombre d'étudiants`, color = factor(Parcours, levels = c("Inscription 1ère année", "Inscription 2è année"))), 
+                     arrow = arrow(length = unit(4, 'mm')), end_cap = circle(4, 'mm')) +   
+  geom_node_point(aes(color = is_spe_bac), size = 10, alpha = 0.95) + 
+  geom_node_text(aes(label = str_wrap(name, width = 25), vjust = ypos, color = is_spe_bac), hjust = 0, size = 5) + 
   scale_edge_width(range = c(0.5, 5)) + 
-  scale_color_manual(values = c("Spécialités au BAC" = "#345E68", "Inscription 1ère année" = "#FEDEA0", "Inscription 2è année" = "#B7C2A5")) +
-  labs(title = "Diplômes universitaires des bacheliers aux spécialités SVT et Maths en Ile-de-France",
-       subtitle = "Seuls les 10 diplômes regroupant le plus d'étudiants en première année sont affichés\n") +
+  scale_color_manual(values = c("1" = "black", "2" = "#345E68")) +
+  scale_edge_color_manual(values = c("Inscription 1ère année" = "#B7C2A5", 
+                                     "Inscription 2è année" = "#FEDEA0", 
+                                     "La 2è année d'inscription" = "#345E68")) +
+  labs(title = "Diplômes universitaires des bacheliers aux spécialités Maths et SVT en Ile-de-France",
+       subtitle = "Seuls les 10 diplômes regroupant le plus d'étudiants en première année sont affichés\n",
+       edge_color = "Parcours") +
   theme_void() +
   theme(legend.position = "top",
         legend.title = ggplot2::element_text(size = 18, color = "#222222"), 
@@ -225,9 +276,10 @@ reseau <- ggraph(graph, layout = 'stress') +
         legend.box = "vertical", legend.box.just = "left",
         plot.title = ggplot2::element_text(size = 21, face = "bold", color = "#222222"), 
         plot.subtitle = ggplot2::element_text(size = 18, face = "italic", margin = ggplot2::margin(0, 0, 9, 0))) +
-  guides(color = guide_legend(nrow = 1, byrow = TRUE, title = "Parcours", override.aes = list(lwd = 2)),
-         width = guide_legend(override.aes = list(lwd = 20)))
-ggsave(file = "figures/dataviz_atelier/reseau_diplomes_svt_maths.png", plot = reseau, width = 13, height = 9)
+  guides(color = "none",
+         edge_color = guide_legend(override.aes = list(size = 10)),
+         width = guide_legend(override.aes = list(lwd = 10)))
+ggsave(file = "figures/dataviz_atelier/reseau_diplomes_svt_maths.png", plot = reseau, width = 15, height = 11)
 
 
 
@@ -242,8 +294,9 @@ table <- cohortes_unnest |>
   mutate(annee = str_sub(parcours_annee, 1, 1)) |> 
   filter(annee != ".") |> 
   filter(annee == max(as.numeric(annee)), .by = cohorteid) |> 
-  mutate(effectif_reel = ifelse(effectif == 0, 1.14, effectif * 1.14)) |> 
+  mutate(effectif_reel = ifelse(effectif == 0, 1.148, effectif)) |> 
   summarise(nb_etudiants = sum(effectif_reel, na.rm = TRUE), .by = annee) |> 
+  filter(annee != 0) |> 
   mutate(percent = round(nb_etudiants / sum(nb_etudiants) * 100, 0))
 
 # Visualisation
@@ -251,23 +304,26 @@ histo <- ggplot(table) +
   aes(x = annee, y = nb_etudiants) +
   geom_col(fill = "#345E68") +
   labs(
-    x = "Nombre d'années après le BAC",
+    x = "Niveau d'études post BAC",
     y = "Nombre d'étudiants",
-    title = "Répartition des étudiants d'Ile-de-France selon le nombre d'années d'étude après le BAC"
+    title = "Répartition des étudiants d'Ile-de-France selon le niveau d'études post BAC",
+    caption = "Les niveaux 6 correspondent aux doctorants et les 17 aux vétérinaires"
   ) +
   geom_label(aes(y = nb_etudiants + 0.06*max(nb_etudiants), label = paste0(percent, "%")), size = 5, fill = "white", label.size = NA) +
   scale_y_continuous(labels = scales::comma) +
   custom_theme() +
   theme(plot.title.position = "plot")
-
+histo
 
 
     # 2) Nombre de réorientations
 
 # Préparation des données
 table <- cohortes_unnest_enrichies |> 
-  distinct(cohorteid, effectif, nom_diplome) |> 
-  summarise(nb_filieres = n(), effectif_reel = ifelse(effectif == 0, 1.14, effectif * 1.14), 
+  mutate(degre_etude = replace_na(degre_etude, 0)) |> 
+  filter(degre_etude == min(degre_etude) | degre_etude == min(degre_etude[degre_etude != min(degre_etude)]), .by = cohorteid) |> 
+  distinct(cohorteid, effectif, nom_secteur_discipline) |> 
+  summarise(nb_filieres = n(), effectif_reel = ifelse(effectif == 0, 1.148, effectif), 
             .by = cohorteid) |> 
   distinct()
 resume <- table |> 
@@ -295,8 +351,8 @@ donut <- resume |>
                                    "Deux filières" = "#FEDEA0", 
                                    "Trois filières et plus" = "#B7C2A5")) +
       coord_polar(theta = "y") +
-      labs(title = "Répartition des étudiants d'Ile-de-France selon les\nréorientations au cours des études supérieures",
-           subtitle = "Nombre de filières de diplôme par parcours étudiant\n") +
+      labs(title = "Répartition des étudiants d'Ile-de-France selon les\nréorientations au cours des deux premières années \nd'études supérieures",
+           subtitle = "Nombre de secteurs disciplinaires par parcours étudiant\nsur les deux premières inscriptions\n") +
       theme_void() +
       theme(legend.position = "top",
             legend.title = ggplot2::element_text(size = 18, color = "#222222"), 
@@ -312,7 +368,7 @@ donut
 # Préparation des données
 table <- cohorte_spe |> 
     mutate(couple_spe = paste(bac_spe1, "-", bac_spe2),
-           effectif_reel = ifelse(effectif == 0, 1.14, effectif * 1.14)) |> 
+           effectif_reel = ifelse(effectif == 0, 1.148, effectif)) |> 
     summarise(effectif_couple_spe = sum(effectif_reel, na.rm = TRUE), .by = couple_spe) |> 
     arrange(desc(effectif_couple_spe)) |> 
     filter(couple_spe != "NA - NA") |> 
@@ -337,7 +393,7 @@ treemap <- table |>
 
 a <- plot_grid(histo, treemap, nrow = 1, align = 'vh')
 ggsave(file = "figures/dataviz_atelier/annees-etudes_specialites-bac.png", plot = a, width = 23, height = 7)
-ggsave(file = "figures/dataviz_atelier/repartition-reorientations.png", plot = donut, width = 9, height = 6)
+ggsave(file = "figures/dataviz_atelier/repartition-reorientations.png", plot = donut, width = 10, height = 8)
 
 
 
@@ -376,4 +432,4 @@ noeuds_filtre <- rbind(noeuds_filtre_inter |>
                          rename(name = nom_formation_V2, group = discipline_V2)) |> 
   distinct() |> na.omit() |> 
   mutate(group = gsub("^(\\w)(\\w+)", "\\U\\1\\L\\2", tolower(group), perl = TRUE)) |> 
-  add_row(name = "MATHS - SVT", group = "Spécialité au BAC")  
+  add_row(name = "Mathématiques - Sciences de la vie et de la Terre", group = "Spécialité au BAC")  

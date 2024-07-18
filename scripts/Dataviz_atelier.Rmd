@@ -30,6 +30,7 @@ knitr::opts_chunk$set(
 	out.width = "100%",
 	results = "asis"
 )
+library(icons)
 ```
 
 ```{r logo}
@@ -41,7 +42,26 @@ htmltools::img(src = "https://nextcloud.datactivist.coop/s/o53wzfMNnFosQni/previ
 
 Les data-visualisations ont été construites sur les données [data.unif](https://data.unif.app/data/avril2024/Ile-de-France/) d'avril 2024 portant sur la **région Ile-de-France**.
 
+Pour chacune d'elle, les effectifs initialement à *0* ont été remplacés par ***1.148*** pour réajuster la coupe des cohortes liée à l'anonymisation (pour rappel, les agrégats de moins de 5 personnes sont mis à 0 de manière à empêcher la réidentification des personnes). 
+
+
 ## Datavisualisation n°2
+
+Avant le graphique principal, ci-dessous une répartition des étudiants dans les 10 formations les plus choisies, pour avoir une idée des ordres de grandeur avant lecture du graphique suivant. 
+
+Une précision : lorsqu'une cohorte est composée de plusieurs formations, l'effectif total de la cohorte sera comptabilisé autant de fois qu'il y a de formations différentes (les données étant agrégées il n'est pas possible de faire autrement).
+
+
+<br>
+
+<p align="center">
+
+<img src="../figures/dataviz_atelier/top10_formations.png"/>
+
+</p>
+
+<br>
+
 
 Quelques précisions avant lecture du graphique ci-dessous : 
 
@@ -49,6 +69,23 @@ Quelques précisions avant lecture du graphique ci-dessous :
 - par la suite, les formations année par année après le BAC ont été séparées et jointes avec les données *diplômes* des [référentiels ortho-typographiés](https://data.pages.unif.app/data-futures.html#r%C3%A9f%C3%A9rentiels-ortho-typographi%C3%A9s). Dans le cas de multi-inscriptions (séparées par le sigle '&'), seule la première inscription a été gardée ;
 - le nombre d'étudiants a été sommé par parcours de formation d'une année à une autre (les données étant agrégées, c'est l'effectif de toute la cohorte qui a été sommé, pour le passage d'une formation A à une formation B, et l'effectif de toute la cohorte également, d'une formation B à une formation C) ;
 - enfin, seuls les 10 parcours rassemblant le plus d'étudiants ont été affichés, pour garantir la lisibilité de la data-visualisation. 
+
+<br>
+
+<style>
+div.blue { background-color:#efefef; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+ `r icon_style(fontawesome("lightbulb", style = "solid"), fill = "#666666")`  <FONT COLOR="#333333">**Dataviz mode d'emploi**
+
+La visualisation ci-dessous montre les 10 parcours étudiants les plus suivis par les élèves ayant choisi les spécialités Mathématiques et SVT au baccalauréat. Les flèches montrent les formations vers lesquelles ils se sont dirigés, avec une épaisseur qui dépend du nombre d'étudiants ayant suivi ce parcours. Lorsqu'un étudiant reste dans la même formation d'une année à une autre, une flèche sous forme de boucle est affichée pour signifier ce maintien.
+
+Seules deux années de parcours sont affichées sur ce graphique, étant donné que celui-ci se base sur les spécialités choisies au bac, en vigueur depuis la réforme de 2021.
+
+Du fait de l'agrégation et l'anonymisation des données, les effectifs exacts ne sont pas toujours représentatifs de la réalité. C'est pourquoi cette visualisation doit être lue et interprétée par ses ordres de grandeur davantage que ses valeurs exactes.</FONT>
+
+</div>
 
 <br>
 
@@ -62,7 +99,6 @@ Quelques précisions avant lecture du graphique ci-dessous :
 
 Quelques précisions avant lecture des graphiques ci-dessous : 
 
-- les effectifs des 3 data-visualisations ont été multiplié par 1.14 pour réajuster la coupe des cohortes liée à l'anonymisation (pour rappel, les agrégats de moins de 5 personnes sont mis à 0 de manière à empêcher la réidentification des personnes). Pour les cohortes "coupées", c'est l'effectif 1.14 qui vient remplacer le 0, pour ces 3 graphiques ; 
 - le **nombre d'année après le BAC** a été récupéré dans les données des cohortes, en récupérant pour chacune d'elle le niveau (premier caractère du codage des parcours) le plus élevé. Puis, la somme des effectifs a été calculée pour chaque degré maximal d'étude atteint (allant de 0 à 9) ;
 - le **nombre de réorientations** a été calculé à partir des données des cohortes, en comptant le nombre de filières (diplômes) différents dans chaque cohorte (à partir de l'identifiant de formation). Le nombre de filières distinctes allant de 1 à 21, trois catégories ont été créées : 
     - *Filière unique* : c'est-à-dire par de réorientation ; 
