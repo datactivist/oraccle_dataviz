@@ -79,7 +79,7 @@ div.blue { background-color:#efefef; border-radius: 5px; padding: 20px;}
 
  `r icon_style(fontawesome("lightbulb", style = "solid"), fill = "#666666")`  <FONT COLOR="#333333">**Dataviz mode d'emploi**
 
-La visualisation ci-dessous montre les 10 parcours étudiants les plus suivis par les élèves ayant choisi les spécialités Mathématiques et SVT au baccalauréat. Les flèches montrent les formations vers lesquelles ils se sont dirigés, avec une épaisseur qui dépend du nombre d'étudiants ayant suivi ce parcours. Lorsqu'un étudiant reste dans la même formation d'une année à une autre, une flèche sous forme de boucle est affichée pour signifier ce maintien.
+La visualisation ci-dessous montre les 10 parcours étudiants les plus suivis par les élèves ayant choisi les spécialités Mathématiques et SVT au baccalauréat. Les flèches montrent les formations dans lesquelles ils se sont inscrits, avec une épaisseur qui dépend du nombre d'étudiants ayant suivi ce parcours. Lorsqu'un étudiant reste dans la même formation d'une année à une autre, une flèche sous forme de boucle est affichée pour signifier ce maintien.
 
 Seules deux années de parcours sont affichées sur ce graphique, étant donné que celui-ci se base sur les spécialités choisies au bac, en vigueur depuis la réforme de 2021.
 
@@ -105,6 +105,21 @@ Quelques précisions avant lecture des graphiques ci-dessous :
     - *Deux filières* : c'est-à-dire 1 réorientation ; 
     - *Trois filières et plus* : c'est-à-dire au moins 2 réorientations.
 - les **spécialités au BAC** ont été récupérées des données *cohorte_spe*, où ont été sommés les effectifs des étudiants par paire de spécialités. Seules les 10 paires les plus choisies par les étudiants ont été affichées sur le graphique.
+
+<br>
+
+<style>
+div.blue { background-color:#efefef; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+ `r icon_style(fontawesome("lightbulb", style = "solid"), fill = "#666666")`  <FONT COLOR="#333333">**Dataviz mode d'emploi**
+
+La visualisation des réorientations ci-dessous montre le nombre de secteurs disciplinaires différents choisis par les étudiants lors de leur inscription en première et deuxième années d'études. La catégorie "Trois filières et plus" regroupant plus de 30.000 étudiants en Ile-de-France, s'explique par les doubles inscriptions et les redoublements dans des disciplines différentes, en première ou deuxième année post-BAC.</FONT>
+
+</div>
+
+<br>
 
 <br>
 

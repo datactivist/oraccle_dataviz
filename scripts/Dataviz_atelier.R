@@ -132,8 +132,18 @@ rio::export(cohortes_unnest_enrichies, "./data/Export/cohortes_unnest_enrichies.
     ## Dataviz n°2 : Autre graph de répartition des étudiants dans les formations
 
 
+#  Liste des cohortes avec les spécialités Maths et SVT au bac
+specialites <- cohorte_spe |> 
+    mutate(couple_spe = paste(bac_spe1, "-", bac_spe2)) |> 
+    filter(couple_spe == "MATHS - SVT") |> 
+    left_join(specialites_bac_OT, by = c("bac_spe1" = "libelle_sise")) |> 
+    left_join(specialites_bac_OT, by = c("bac_spe2" = "libelle_sise")) |> 
+    mutate(couple_spe_complet = paste(libelle.x, "-", libelle.y))
+
 # Préparation des données
 table <- cohortes_unnest_enrichies |> 
+  filter(cohorteid %in% specialites$cohorteid) |> #filtre sur les spé Maths et SVT
+  filter(row_number() == 1, .by = cohorteid) |> #filtre sur la première inscription uniquement
   distinct(cohorteid, effectif, id_diplome) |> 
   left_join(diplome_OT |> 
             mutate(nom_formation = gsub("^(\\w)(\\w+)", "\\U\\1\\L\\2", tolower(LIBELLE_INTITULE_1), perl = TRUE)) |> 
@@ -141,7 +151,7 @@ table <- cohortes_unnest_enrichies |>
           by = c("id_diplome" = "DIPLOME_SISE")) |> 
   mutate(effectif = ifelse(effectif == 0, 1.148, effectif)) |> 
   summarise(nb_etudiants = round(sum(effectif), 0), .by = nom_formation) |> 
-  mutate(percent = round(nb_etudiants / sum(nb_etudiants) * 100, 0))
+  mutate(percent = round(nb_etudiants / sum(nb_etudiants) * 100, 1))
 
 # Visualisation
 graph <- table |> 
@@ -154,7 +164,8 @@ graph <- table |>
     labs(
       x = "Formations choisies",
       y = "Nombre d'étudiants",
-      title = "Top 10 des formations les plus choisies par les étudiants d'Ile-de-France"
+      title = "Top 10 des formations les plus choisies par les étudiants d'Ile-de-France \npour leur première année d'inscription",
+      subtitle = "Étudiants ayant choisi les spécialités Maths et SVT au BAC"
     ) +
     coord_flip() +
     scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) +
@@ -172,13 +183,6 @@ ggsave(file = "figures/dataviz_atelier/top10_formations.png", plot = graph, widt
 
 #--- Préparation des données
 
-#  Liste des cohortes avec les spécialités Maths et SVT au bac
-specialites <- cohorte_spe |> 
-    mutate(couple_spe = paste(bac_spe1, "-", bac_spe2)) |> 
-    filter(couple_spe == "MATHS - SVT") |> 
-    left_join(specialites_bac_OT, by = c("bac_spe1" = "libelle_sise")) |> 
-    left_join(specialites_bac_OT, by = c("bac_spe2" = "libelle_sise")) |> 
-    mutate(couple_spe_complet = paste(libelle.x, "-", libelle.y))
 
 # Filtre des cohortes appartenant à la liste
 filtre_spe_cohortes <- cohortes |> 
@@ -321,7 +325,7 @@ histo
 # Préparation des données
 table <- cohortes_unnest_enrichies |> 
   mutate(degre_etude = replace_na(degre_etude, 0)) |> 
-  filter(degre_etude == min(degre_etude) | degre_etude == min(degre_etude[degre_etude != min(degre_etude)]), .by = cohorteid) |> 
+  filter(degre_etude == 1 | degre_etude == 2) |> 
   distinct(cohorteid, effectif, nom_secteur_discipline) |> 
   summarise(nb_filieres = n(), effectif_reel = ifelse(effectif == 0, 1.148, effectif), 
             .by = cohorteid) |> 
